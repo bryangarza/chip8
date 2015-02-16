@@ -28,7 +28,7 @@ void cpu_reset()
     memset(V, 0, sizeof(V));
     FILE *in;
     in = fopen("./c8games/PONG", "rb");
-    fread(&memory[0x200], 0xfff, 1, in);
+    fread(&memory[0x200], 0xFFF, 1, in);
     /* for(int i = 0; i < (0xfff - 0x200); i++) { */
     /*     printf("%x ", memory[i+0x200]); */
     /* } */
@@ -43,4 +43,30 @@ short get_next_opcode()
     opcode = memory[pc] << 8 | memory[pc + 1];
     pc += 2;
     return opcode;
+}
+
+void emulate_cycle()
+{
+    opcode = get_next_opcode();
+
+    switch(opcode * 0xF000) {
+        case 0x0000:
+            switch(opcode & 0x000F) {
+                case 0x0000: // 0x00E0: Clears the screen
+                    // Execute opcode
+                    break;
+                case 0x000E: // 0x00EE: Returns from a subroutine
+                    // Execute opcode
+                    break;
+                default:
+                    printf("Unknown opcode [0x0000]: 0x%X\n", opcode);
+            }
+            break;
+        case 0x1000: // 0x1NNN: Jumps to address NNN
+            break;
+        case 0x2000: // 0x2NNN: Calls subroutine at NNN
+            break;
+        case 0x3000: // 0x3XNN Skips the next instruction if VX equals NN
+            break;
+    }
 }
