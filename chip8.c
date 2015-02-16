@@ -17,11 +17,11 @@ unsigned char key[16];
 
 int main(int argc, char *argv[])
 {
-    CPUReset();
+    cpu_reset();
     return(0);
 }
 
-void CPUReset()
+void cpu_reset()
 {
     I = 0;
     pc = 0x200;
@@ -32,5 +32,15 @@ void CPUReset()
     /* for(int i = 0; i < (0xfff - 0x200); i++) { */
     /*     printf("%x ", memory[i+0x200]); */
     /* } */
+
+    /* printf("%x", get_next_opcode()); */
     fclose(in);
+}
+
+short get_next_opcode()
+{
+    unsigned short opcode;
+    opcode = memory[pc] << 8 | memory[pc + 1];
+    pc += 2;
+    return opcode;
 }
