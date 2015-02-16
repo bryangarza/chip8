@@ -94,9 +94,11 @@ void emulate_cycle()
         break;
     case 0x6000: /* 0x6XNN Sets VX to NN */
         V[(opcode & 0x0F00) >> 8] = (opcode * 0x00FF);
+        pc += 2;
         break;
     case 0x7000: /* 0x7XNN Adds NN to VX */
         V[(opcode & 0x0F00) >> 8] += (opcode * 0x00FF);
+        pc += 2;
         break;
     case 0x8000:
         switch(opcode & 0x000F) {
@@ -138,22 +140,43 @@ void emulate_cycle()
             else {
                 V[0xF] = 0;
             }
+            pc += 2;
             break;
         case 0x0006: /* 0x8XY6 Shifts VX right by one. VF is set to the value of
                       * the least significant bit of VX before the shift.
                       */
+            V[0xF] = V[(opcode & 0x0F00) >> 8] & 0x1;
+            V[(opcode & 0x0F00) >> 8] >>= 4;
+            pc += 2;
             break;
         case 0x0007: /* 0x8XY7 Sets VX to VY minus VX. VF is set to 0 when
                       * there's a borrow, and 1 when there isn't.
                       */
+            if (V[opcode & 0x00F0 >> 4] > V[(opcode & 0x0F00) >> 8]) {
+                V[0xF] = 1;
+            }
+            else {
+                V[0xF] = 0;
+            }
+            V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x00F0) >> 4] - V[(opcode & 0x0F00) >> 8];
+            pc += 2;
             break;
         case 0x000E: /* 0x8XYE Shifts VX left by one. VF is set to the value of
                       * the most significant bit of VX before the shift.
                       */
+            V[0xF] = V[(opcode & 0x0F00) >> 8] & 0x8 >> 3;
+            V[(opcode & 0x0F00) >> 8] <<= 4;
+            pc += 2;
             break;
         }
         break;
     case 0x9000: /* 0x9XY0 Skips the next instruction if VX doesn't equal VY */
+        if (V[(opcode & 0x0F000) >> 8] != V[(opcode & 0x00F0) >> 4]) {
+            pc += 4;
+        }
+        else {
+            pc += 2;
+        }
         break;
     case 0xA000: /* 0xANNN Sets I to the address NNN */
         break;
