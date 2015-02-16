@@ -53,7 +53,25 @@ int main(int argc, char *argv[])
         memory[i] = chip8_fontset[i];
     }
 
+    SDL_Surface *screen;
     SDL_Window *window;
+    SDL_Surface *surface;
+    unsigned long rmask;
+    unsigned long gmask;
+    unsigned long bmask;
+    unsigned long amask;
+
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+    rmask = 0xff000000;
+    gmask = 0x00ff0000;
+    bmask = 0x0000ff00;
+    amask = 0x000000ff;
+#else
+    rmask = 0x000000ff;
+    gmask = 0x0000ff00;
+    bmask = 0x00ff0000;
+    amask = 0xff000000;
+#endif
 
     SDL_Init(SDL_INIT_VIDEO);
 
@@ -71,10 +89,24 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    surface = SDL_CreateRGBSurface(0, 20, 40, 32, rmask, gmask, bmask, amask);
+    SDL_FillRect(surface, NULL, SDL_MapRGB(surface->format, 255, 0, 0));
+
+    if (surface == NULL) {
+        fprintf(stderr, "CreateRGBSurface failed: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    /* Instead of creating a renderer, draw directly to the screen. */
+    screen = SDL_GetWindowSurface(window);
+
+    SDL_BlitSurface(surface, NULL, screen, NULL);
+    SDL_FreeSurface(surface);
+
+    SDL_UpdateWindowSurface(window);
+
     SDL_Delay(3000);
-
     SDL_DestroyWindow(window);
-
     SDL_Quit();
     return 0;
 }
