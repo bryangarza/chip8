@@ -63,6 +63,9 @@ void emulate_cycle()
     case 0x1000: /* 0x1NNN Jumps to address NNN */
         break;
     case 0x2000: /* 0x2NNN Calls subroutine at NNN */
+        stack[sp] = pc;
+        ++sp;
+        pc = opcode & 0x0FFF;
         break;
     case 0x3000: /* 0x3XNN Skips the next instruction if VX equals NN */
         break;
@@ -87,6 +90,14 @@ void emulate_cycle()
         case 0x0004: /* 0x8XY4 Adds VY to VX. VF is set to 1 when there's a
                       * carry, and to 0 when there isn't.
                       */
+            if (V[(opcode & 0x00F0) >> 4] > (0xFF - V[(opcode & 0x0F00) >> 8])) {
+                V[0xF] = 1; /* carry */
+            }
+            else {
+                V[0xF] = 0;
+            }
+            V[(opcode & 0x0F00) >> 8] += V[(opcode & 0x00F0) >> 4];
+            pc += 2;
             break;
         case 0x0005: /* 0x8XY5 VY is subtracted from VX. VF is set to 0 when
                       * there's a borrow, and to 1 when there isn't.
