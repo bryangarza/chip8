@@ -37,7 +37,7 @@ void cpu_reset()
     fclose(in);
 }
 
-short get_next_opcode()
+unsigned short get_next_opcode()
 {
     unsigned short opcode;
     opcode = memory[pc] << 8 | memory[pc + 1];
@@ -55,12 +55,13 @@ void emulate_cycle()
         case 0x0000: /* 0x00E0: Clears the screen */
             break;
         case 0x000E: /* 0x00EE: Returns from a subroutine */
+            pc = stack[sp];
+            --sp;
             break;
-        default:
-            printf("Unknown opcode [0x0000]: 0x%X\n", opcode);
         }
         break;
     case 0x1000: /* 0x1NNN Jumps to address NNN */
+        pc = opcode & 0x0FFF;
         break;
     case 0x2000: /* 0x2NNN Calls subroutine at NNN */
         stack[sp] = pc;
@@ -84,7 +85,7 @@ void emulate_cycle()
         }
         break;
     case 0x5000: /* 0x5XY0 Skips the next instruction if VX equals VY */
-        if (V[(opcode & 0x0F00) >> 8] == (V[opcode & 0x00F0) >> 4)) {
+        if (V[(opcode & 0x0F00) >> 8] == (V[(opcode & 0x00F0) >> 4])) {
             pc += 4;
         }
         else {
@@ -92,8 +93,10 @@ void emulate_cycle()
         }
         break;
     case 0x6000: /* 0x6XNN Sets VX to NN */
+        V[(opcode & 0x0F00) >> 8] = (opcode * 0x00FF);
         break;
-    case 0x7000: /* 0x7XNN Sets NN to VX */
+    case 0x7000: /* 0x7XNN Adds NN to VX */
+        V[(opcode & 0x0F00) >> 8] += (opcode * 0x00FF);
         break;
     case 0x8000:
         switch(opcode & 0x000F) {
@@ -128,6 +131,13 @@ void emulate_cycle()
         case 0x0005: /* 0x8XY5 VY is subtracted from VX. VF is set to 0 when
                       * there's a borrow, and to 1 when there isn't.
                       */
+            V[(opcode & 0x0F00) >> 8] -= V[(opcode & 0x00F0) >> 4];
+            if (V[opcode & 0x0F00 >> 8] > V[(opcode & 0x00F0) >> 4]) {
+                V[0xF] = 1;
+            }
+            else {
+                V[0xF] = 0;
+            }
             break;
         case 0x0006: /* 0x8XY6 Shifts VX right by one. VF is set to the value of
                       * the least significant bit of VX before the shift.
