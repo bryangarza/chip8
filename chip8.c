@@ -110,17 +110,26 @@ void emulate_cycle()
         break;
     case 0xA000: /* 0xANNN Sets I to the address NNN */
         break;
-    case 0xB000:
+    case 0xB000: /* 0xBNNN Jumps to the address NNN plus V0 */
         break;
-    case 0xC000:
+    case 0xC000: /* 0xCNNN Sets VX to a random number, masked by NN */
         break;
-    case 0xD000:
+    case 0xD000: /* 0xDXYN Sprites stored in memory at location in index
+                  * register (I), maximum 8bits wide. Wraps around the
+                  * screen. If when drawn, clears a pixel, register VF is set to
+                  * 1 otherwise it is zero. All drawing is XOR drawing (i.e. it
+                  * toggles the screen pixels).
+                  */
         break;
     case 0xE000:
         switch(opcode & 0x000F) {
-        case 0x000E: /* 0xEX9E */
+        case 0x000E: /* 0xEX9E Skips the next instruction if the key stored in
+                      * VX is pressed.
+                      */
             break;
-        case 0x0001: /* 0xEXA1 */
+        case 0x0001: /* 0xEXA1 Skips the next instruction if the key stored in
+                      * VX isn't pressed.
+                      */
             break;
         }
         break;
@@ -128,9 +137,11 @@ void emulate_cycle()
         switch(opcode & 0x00F0) {
         case 0x0000:
             switch(opcode & 0x000F) {
-            case 0x0007: /* 0xFX07 */
+            case 0x0007: /* 0xFX07 Sets VX to the value of the delay timer */
                 break;
-            case 0x000A: /* 0xFX0A */
+            case 0x000A: /* 0xFX0A A key press is awaited, and then stored in
+                          * VX
+                          */
                 break;
             }
             break;
