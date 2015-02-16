@@ -68,10 +68,28 @@ void emulate_cycle()
         pc = opcode & 0x0FFF;
         break;
     case 0x3000: /* 0x3XNN Skips the next instruction if VX equals NN */
+        if (V[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF)) {
+            pc += 4;
+        }
+        else {
+            pc += 2;
+        }
         break;
     case 0x4000: /* 0x4XNN Skips the next instruction if VX doesn't equal NN */
+        if (V[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF)) {
+            pc += 4;
+        }
+        else {
+            pc += 2;
+        }
         break;
     case 0x5000: /* 0x5XY0 Skips the next instruction if VX equals VY */
+        if (V[(opcode & 0x0F00) >> 8] == (V[opcode & 0x00F0) >> 4)) {
+            pc += 4;
+        }
+        else {
+            pc += 2;
+        }
         break;
     case 0x6000: /* 0x6XNN Sets VX to NN */
         break;
@@ -80,12 +98,20 @@ void emulate_cycle()
     case 0x8000:
         switch(opcode & 0x000F) {
         case 0x0000: /* 0x8XY0 Sets VX to the value of VY */
+            V[(opcode & 0x0F00) >> 8] = (opcode & 0x00F0) >> 4;
+            pc += 2;
             break;
         case 0x0001: /* 0x8XY1 Sets VX to VX or VY */
+            V[(opcode & 0x0F00) >> 8] |= (opcode & 0x00F0) >> 4;
+            pc += 2;
             break;
         case 0x0002: /* 0x8XY2 Sets VX to VX and VY */
+            V[(opcode & 0x0F00) >> 8] &= (opcode & 0x00F0) >> 4;
+            pc += 2;
             break;
         case 0x0003: /* 0x8XY3 Sets VX to VX xor VY */
+            V[(opcode & 0x0F00) >> 8] ^= (opcode & 0x00F0) >> 4;
+            pc += 2;
             break;
         case 0x0004: /* 0x8XY4 Adds VY to VX. VF is set to 1 when there's a
                       * carry, and to 0 when there isn't.
