@@ -1,8 +1,15 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <SDL2/SDL.h>
 
 #include "chip8.h"
+
+
+#define SCREEN_W 640
+#define SCREEN_H 320
+#define W 64
+#define H 32
 
 unsigned short opcode;
 unsigned char memory[4096];
@@ -45,7 +52,31 @@ int main(int argc, char *argv[])
     for(int i = 0; i < 80; i++) {
         memory[i] = chip8_fontset[i];
     }
-    return(0);
+
+    SDL_Window *window;
+
+    SDL_Init(SDL_INIT_VIDEO);
+
+    window = SDL_CreateWindow(
+        "Chip8",
+        SDL_WINDOWPOS_UNDEFINED,
+        SDL_WINDOWPOS_UNDEFINED,
+        SCREEN_W,
+        SCREEN_H,
+        SDL_WINDOW_OPENGL
+    );
+
+    if (window == NULL) {
+        printf("Could not create window: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    SDL_Delay(3000);
+
+    SDL_DestroyWindow(window);
+
+    SDL_Quit();
+    return 0;
 }
 
 void cpu_reset()
@@ -62,6 +93,10 @@ void cpu_reset()
 
     /* printf("%x", get_next_opcode()); */
     fclose(in);
+}
+
+void draw()
+{
 }
 
 unsigned short get_next_opcode()
