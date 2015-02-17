@@ -193,10 +193,10 @@ void emulate_cycle()
         }
         break;
     case 0x6000: /* 0x6XNN Sets VX to NN */
-        V[(opcode & 0x0F00) >> 8] = (opcode * 0x00FF);
+        V[(opcode & 0x0F00) >> 8] = (opcode & 0x00FF);
         break;
     case 0x7000: /* 0x7XNN Adds NN to VX */
-        V[(opcode & 0x0F00) >> 8] += (opcode * 0x00FF);
+        V[(opcode & 0x0F00) >> 8] += (opcode & 0x00FF);
         break;
     case 0x8000:
         switch(opcode & 0x000F) {
