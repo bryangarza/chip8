@@ -17,7 +17,7 @@ unsigned char memory[4096];
 unsigned char V[16];
 unsigned short I;
 unsigned short pc;
-unsigned char gfx[64 * 32];
+unsigned char gfx[64][32];
 unsigned char delay_timer;
 unsigned char sound_timer;
 unsigned short stack[16];
@@ -64,19 +64,21 @@ int main(int argc, char *argv[])
         SDL_WINDOWPOS_UNDEFINED,
         SCREEN_W,
         SCREEN_H,
-        SDL_WINDOW_OPENGL
+        SDL_WINDOW_SHOWN
     );
 
-    if (window == NULL) {
-        printf("Could not create window: %s\n", SDL_GetError());
-        return 1;
-    }
+    SDL_Renderer *renderer;
+    renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED);
 
     uint32_t ms = 15;
+    /* gfx[3][4] = 1; */
+    /* draw(renderer, ms); */
+    /* gfx[5][10] = 1; */
+    /* draw(renderer, ms); */
 
     for (;;) {
         emulate_cycle();
-        draw(window, ms);
+        draw(renderer, ms);
     }
 
     SDL_DestroyWindow(window);
@@ -84,28 +86,32 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void draw(SDL_Window *window, uint32_t ms)
+void draw(SDL_Renderer *renderer, uint32_t ms)
 {
-    SDL_Surface *surface;
 
-    /* /\* Instead of creating a renderer, draw directly to the screen. *\/ */
-    surface = SDL_GetWindowSurface(window);
+    SDL_Rect r;
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
 
-    SDL_LockSurface(surface);
-    uint32_t *screen = (uint32_t *)surface->pixels;
-    memset(screen, 0, surface->w * surface->h * sizeof(uint32_t));
+    /* Clear window */
+    SDL_RenderClear(renderer);
 
-    for (int i = 0; i < SCREEN_H; i++) {
-        for (int j = 0; j < SCREEN_W; j++) {
-            screen[j+i*surface->w] = gfx[(j/10)+(i/10)*64] ? 0xFFFFFFFF : 0;
+    for (int y = 0; y < W; y++) {
+        for (int x = 0; x < H; x++) {
+            if (gfx[y][x] != 0) {
+                printf("Will draw");
+                r.x = x;
+                r.y = y;
+                r.w = 10;
+                r.h = 10;
+            }
         }
     }
 
-    SDL_UnlockSurface(surface);
-    /* SDL_BlitSurface(surface, NULL, screen, NULL); */
-    /* SDL_FreeSurface(surface); */
-    /* like SDL_Flip() in SDL 1.2 */
-    SDL_UpdateWindowSurface(window);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
+
+    SDL_RenderFillRect(renderer, &r);
+
+    SDL_RenderPresent(renderer);
 
     SDL_Delay(ms);
 }
@@ -117,7 +123,7 @@ void cpu_reset()
     pc = 0x200;
     memset(V, 0, sizeof(V));
     FILE *in;
-    in = fopen("./c8games/INVADERS", "rb");
+    in = fopen("./c8games/Breakout.ch8", "rb");
     fread(&memory[0x200], 0xFFF, 1, in);
     /* for(int i = 0; i < (0xfff - 0x200); i++) { */
     /*     printf("%x ", memory[i+0x200]); */
@@ -140,7 +146,7 @@ void emulate_cycle()
     opcode = get_next_opcode();
     printf("Instruction %X\n", opcode);
 
-    switch(opcode * 0xF000) {
+    switch(opcode & 0xF000) {
     case 0x0000:
         switch(opcode & 0x000F) {
         case 0x0000: /* 0x00E0: Clears the screen */
@@ -214,51 +220,51 @@ void emulate_cycle()
         case 0x0004: /* 0x8XY4 Adds VY to VX. VF is set to 1 when there's a
                       * carry, and to 0 when there isn't.
                       */
+            V[0xF] = 0;
+
             if (V[(opcode & 0x00F0) >> 4] > (0xFF - V[(opcode & 0x0F00) >> 8])) {
                 V[0xF] = 1; /* carry */
             }
-            else {
-                V[0xF] = 0;
-            }
+
             V[(opcode & 0x0F00) >> 8] += V[(opcode & 0x00F0) >> 4];
             pc += 2;
             break;
         case 0x0005: /* 0x8XY5 VY is subtracted from VX. VF is set to 0 when
                       * there's a borrow, and to 1 when there isn't.
                       */
-            if (V[opcode & 0x0F00 >> 8] > V[(opcode & 0x00F0) >> 4]) {
-                V[0xF] = 1;
-            }
-            else {
+            V[0xF] = 1;
+
+            if (V[opcode & 0x0F00 >> 8] < V[(opcode & 0x00F0) >> 4]) {
                 V[0xF] = 0;
-            V[(opcode & 0x0F00) >> 8] -= V[(opcode & 0x00F0) >> 4];
             }
+
+            V[(opcode & 0x0F00) >> 8] -= V[(opcode & 0x00F0) >> 4];
             pc += 2;
             break;
         case 0x0006: /* 0x8XY6 Shifts VX right by one. VF is set to the value of
                       * the least significant bit of VX before the shift.
                       */
             V[0xF] = V[(opcode & 0x0F00) >> 8] & 0x1;
-            V[(opcode & 0x0F00) >> 8] >>= 4;
+            V[(opcode & 0x0F00) >> 8] >>= 1;
             pc += 2;
             break;
         case 0x0007: /* 0x8XY7 Sets VX to VY minus VX. VF is set to 0 when
                       * there's a borrow, and 1 when there isn't.
                       */
-            if (V[opcode & 0x00F0 >> 4] > V[(opcode & 0x0F00) >> 8]) {
-                V[0xF] = 1;
-            }
-            else {
+            V[0xF] = 1;
+
+            if (V[(opcode & 0x00F0) >> 4] < V[(opcode & 0x0F00) >> 8]) {
                 V[0xF] = 0;
             }
+
             V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x00F0) >> 4] - V[(opcode & 0x0F00) >> 8];
             pc += 2;
             break;
         case 0x000E: /* 0x8XYE Shifts VX left by one. VF is set to the value of
                       * the most significant bit of VX before the shift.
                       */
-            V[0xF] = V[(opcode & 0x0F00) >> 8] & 0x8 >> 3;
-            V[(opcode & 0x0F00) >> 8] <<= 4;
+            V[0xF] = V[(opcode & 0x0F00) >> 8] >> 7;
+            V[(opcode & 0x0F00) >> 8] <<= 1;
             pc += 2;
             break;
         }
@@ -276,10 +282,10 @@ void emulate_cycle()
         pc += 2;
         break;
     case 0xB000: /* 0xBNNN Jumps to the address NNN plus V0 */
-        pc = (opcode & 0x0FFF) + V[0];
+        pc = V[0] + (opcode & 0x0FFF);
         break;
     case 0xC000: /* 0xCXNN Sets VX to a random number, masked by NN */
-        V[(opcode & 0x0F00) >> 8] = rand() % 0xFFFF & (opcode & 0x00FF);
+        V[(opcode & 0x0F00) >> 8] = rand() & (opcode & 0x00FF);
         pc += 2;
         break;
     case 0xD000: /* 0xDXYN Sprites stored in memory at location in index
@@ -288,25 +294,45 @@ void emulate_cycle()
                   * 1 otherwise it is zero. All drawing is XOR drawing (i.e. it
                   * toggles the screen pixels).
                   */
+        printf(" opcode %X, ie 0xDXYN, XOR drawing.....\n", opcode);
         {
-            unsigned short x = V[(opcode & 0x0F00) >> 8];
-            unsigned short y = V[(opcode & 0x00F0) >> 4];
+            unsigned short coordx = V[(opcode & 0x0F00) >> 8];
+            unsigned short coordy = V[(opcode & 0x00F0) >> 4];
             unsigned short height = opcode & 0x000F;
-            unsigned short pixel;
 
             V[0xF] = 0;
+
             for (int yline = 0; yline < height; yline++) {
-                pixel = memory[I + yline];
-                for (int xline = 0; xline < 8; xline++) {
-                    if ((pixel & (0x80 >> xline)) != 0) {
-                        if (gfx[(x + xline + ((y + yline) * 64))] == 1) {
+                unsigned short data = memory[I + yline];
+                unsigned char xpixelinv = 7;
+
+                for (int xpixel = 0; xpixel < 8; xpixel++, xpixelinv--) {
+                    unsigned char mask = 1 << xpixelinv;
+                    if (data & mask) {
+
+                        unsigned char x = coordx + xpixel;
+                        unsigned char y = coordy + yline;
+
+                        if (gfx[x][y] == 1) {
+                            /* Collision */
                             V[0xF] = 1;
                         }
-                        gfx[x + xline + ((y + yline) * 64)] ^= 1;
+                        gfx[x][y] ^= 1;
                     }
                 }
             }
 
+            /* for (int yline = 0; yline < height; yline++) { */
+            /*     pixel = memory[I + yline]; */
+            /*     for (int xline = 0; xline < 8; xline++) { */
+            /*         if ((pixel & (0x80 >> xline)) != 0) { */
+            /*             if (gfx[(x + xline + ((y + yline) * 64))] == 1) { */
+            /*                 V[0xF] = 1; */
+            /*             } */
+            /*             gfx[x + xline + ((y + yline) * 64)] ^= 1; */
+            /*         } */
+            /*     } */
+            /* } */
             draw_flag = 1;
             pc += 2;
         }
@@ -316,7 +342,7 @@ void emulate_cycle()
         case 0x009E: /* 0xEX9E Skips the next instruction if the key stored in
                       * VX is pressed.
                       */
-            if (key[V[(opcode & 0x0F00) >> 8]] != 0) {
+            if (key[V[(opcode & 0x0F00) >> 8]] == 1) {
                 pc += 4;
             }
             else {
@@ -381,7 +407,7 @@ void emulate_cycle()
                 unsigned char vx = V[(opcode * 0x0F00) >> 8];
                 memory[I] = vx / 100;
                 memory[I + 1] = (vx / 10) % 10;
-                memory[I + 2] = (vx % 100) % 10;
+                memory[I + 2] = vx % 10;
                 pc += 2;
             }
             break;
@@ -389,9 +415,11 @@ void emulate_cycle()
             {
                 int vx = (opcode & 0x0F00) >> 8;
                 int v = 0;
+
                 while (v <= vx) {
                     memory[I + v] = V[v];
                 }
+
                 I = I + vx + 1;
                 pc += 2;
             }
@@ -402,15 +430,20 @@ void emulate_cycle()
             {
                 int vx = (opcode & 0x0F00) >> 8;
                 int v = 0;
+
                 while (v <= vx) {
                     V[v] = memory[I + v];
                     v++;
                 }
+
                 I = I + vx + 1;
                 pc += 2;
             }
             break;
         }
+        default:
+            printf("%X: No match\n", opcode);
+            break;
         break;
     }
 }
