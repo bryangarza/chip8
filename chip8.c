@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <SDL2/SDL.h>
 
 #include "chip8.h"
@@ -53,25 +54,7 @@ int main(int argc, char *argv[])
         memory[i] = chip8_fontset[i];
     }
 
-    SDL_Surface *screen;
     SDL_Window *window;
-    SDL_Surface *surface;
-    unsigned long rmask;
-    unsigned long gmask;
-    unsigned long bmask;
-    unsigned long amask;
-
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-    rmask = 0xff000000;
-    gmask = 0x00ff0000;
-    bmask = 0x0000ff00;
-    amask = 0x000000ff;
-#else
-    rmask = 0x000000ff;
-    gmask = 0x0000ff00;
-    bmask = 0x00ff0000;
-    amask = 0xff000000;
-#endif
 
     SDL_Init(SDL_INIT_VIDEO);
 
@@ -89,27 +72,44 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    surface = SDL_CreateRGBSurface(0, 20, 40, 32, rmask, gmask, bmask, amask);
-    SDL_FillRect(surface, NULL, SDL_MapRGB(surface->format, 255, 0, 0));
+    uint32_t ms = 3000;
 
-    if (surface == NULL) {
-        fprintf(stderr, "CreateRGBSurface failed: %s\n", SDL_GetError());
-        return 1;
+    for (;;) {
+        emulate_cycle();
+        draw(window, ms);
     }
 
-    /* Instead of creating a renderer, draw directly to the screen. */
-    screen = SDL_GetWindowSurface(window);
-
-    SDL_BlitSurface(surface, NULL, screen, NULL);
-    SDL_FreeSurface(surface);
-
-    SDL_UpdateWindowSurface(window);
-
-    SDL_Delay(3000);
     SDL_DestroyWindow(window);
     SDL_Quit();
     return 0;
 }
+
+void draw(SDL_Window *window, uint32_t ms)
+{
+    SDL_Surface *surface;
+
+    /* /\* Instead of creating a renderer, draw directly to the screen. *\/ */
+    surface = SDL_GetWindowSurface(window);
+
+    SDL_LockSurface(surface);
+    uint32_t *screen = (uint32_t *)surface->pixels;
+    memset(screen, 0, surface->w * surface->h * sizeof(uint32_t));
+
+    for (int i = 0; i < SCREEN_H; i++) {
+        for (int j = 0; j < SCREEN_W; j++) {
+            screen[j+i*surface->w] = gfx[(j/10)+(i/10)*64] ? 0xFFFFFFFF : 0;
+        }
+    }
+
+    SDL_UnlockSurface(surface);
+    /* SDL_BlitSurface(surface, NULL, screen, NULL); */
+    /* SDL_FreeSurface(surface); */
+    /* like SDL_Flip() in SDL 1.2 */
+    SDL_UpdateWindowSurface(window);
+
+    SDL_Delay(ms);
+}
+
 
 void cpu_reset()
 {
@@ -125,10 +125,6 @@ void cpu_reset()
 
     /* printf("%x", get_next_opcode()); */
     fclose(in);
-}
-
-void draw()
-{
 }
 
 unsigned short get_next_opcode()
