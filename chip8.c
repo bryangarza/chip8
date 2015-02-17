@@ -17,7 +17,7 @@ unsigned char memory[4096];
 unsigned char V[16];
 unsigned short I;
 unsigned short pc;
-unsigned char gfx[64][32];
+unsigned char gfx[W * H];
 unsigned char delay_timer;
 unsigned char sound_timer;
 unsigned short stack[16];
@@ -95,17 +95,28 @@ void draw(SDL_Renderer *renderer, uint32_t ms)
     /* Clear window */
     SDL_RenderClear(renderer);
 
-    for (int y = 0; y < W; y++) {
-        for (int x = 0; x < H; x++) {
-            if (gfx[y][x] != 0) {
-                printf("Will draw");
-                r.x = x;
-                r.y = y;
+    for (int i = 0; i < SCREEN_H; i++) {
+        for (int j = 0; j < SCREEN_W; j++){
+            if (gfx[(j/10) + (i/10) * 64] >= 1) {
+                r.y = i;
+                r.x = j;
                 r.w = 10;
                 r.h = 10;
             }
         }
     }
+
+    /* for (int y = 0; y < W; y++) { */
+    /*     for (int x = 0; x < H; x++) { */
+    /*         if (gfx[y][x] != 0) { */
+    /*             printf("Will draw"); */
+    /*             r.x = x; */
+    /*             r.y = y; */
+    /*             r.w = 10; */
+    /*             r.h = 10; */
+    /*         } */
+    /*     } */
+    /* } */
 
     SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
 
@@ -294,46 +305,23 @@ void emulate_cycle()
                   * 1 otherwise it is zero. All drawing is XOR drawing (i.e. it
                   * toggles the screen pixels).
                   */
-        printf(" opcode %X, ie 0xDXYN, XOR drawing.....\n", opcode);
         {
-            unsigned short coordx = V[(opcode & 0x0F00) >> 8];
-            unsigned short coordy = V[(opcode & 0x00F0) >> 4];
+            unsigned short vx = V[(opcode & 0x0F00) >> 8];
+            unsigned short vy = V[(opcode & 0x00F0) >> 4];
             unsigned short height = opcode & 0x000F;
+            V[0xF] &= 0;
 
-            V[0xF] = 0;
-
-            for (int yline = 0; yline < height; yline++) {
-                unsigned short data = memory[I + yline];
-                unsigned char xpixelinv = 7;
-
-                for (int xpixel = 0; xpixel < 8; xpixel++, xpixelinv--) {
-                    unsigned char mask = 1 << xpixelinv;
-                    if (data & mask) {
-
-                        unsigned char x = coordx + xpixel;
-                        unsigned char y = coordy + yline;
-
-                        if (gfx[x][y] == 1) {
-                            /* Collision */
+            for (int y = 0; y < height; y++) {
+                unsigned char pixel = memory[I + y];
+                for (int x = 0; x < 8; x++) {
+                    if (pixel & (0x80 >> x)) {
+                        if (gfx[x+vx+(y+vy)*64]) {
                             V[0xF] = 1;
                         }
-                        gfx[x][y] ^= 1;
+                        gfx[x+vx+(y+vy)*64] ^= 1;
                     }
                 }
             }
-
-            /* for (int yline = 0; yline < height; yline++) { */
-            /*     pixel = memory[I + yline]; */
-            /*     for (int xline = 0; xline < 8; xline++) { */
-            /*         if ((pixel & (0x80 >> xline)) != 0) { */
-            /*             if (gfx[(x + xline + ((y + yline) * 64))] == 1) { */
-            /*                 V[0xF] = 1; */
-            /*             } */
-            /*             gfx[x + xline + ((y + yline) * 64)] ^= 1; */
-            /*         } */
-            /*     } */
-            /* } */
-            draw_flag = 1;
             pc += 2;
         }
         break;
