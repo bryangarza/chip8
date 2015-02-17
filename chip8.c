@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    uint32_t ms = 3000;
+    uint32_t ms = 15;
 
     for (;;) {
         emulate_cycle();
@@ -117,7 +117,7 @@ void cpu_reset()
     pc = 0x200;
     memset(V, 0, sizeof(V));
     FILE *in;
-    in = fopen("./c8games/PONG", "rb");
+    in = fopen("./c8games/INVADERS", "rb");
     fread(&memory[0x200], 0xFFF, 1, in);
     /* for(int i = 0; i < (0xfff - 0x200); i++) { */
     /*     printf("%x ", memory[i+0x200]); */
@@ -138,6 +138,7 @@ unsigned short get_next_opcode()
 void emulate_cycle()
 {
     opcode = get_next_opcode();
+    printf("Instruction %X\n", opcode);
 
     switch(opcode * 0xF000) {
     case 0x0000:
