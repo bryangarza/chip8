@@ -134,7 +134,7 @@ void cpu_reset()
     pc = 0x200;
     memset(V, 0, sizeof(V));
     FILE *in;
-    in = fopen("./c8games/Breakout.ch8", "rb");
+    in = fopen("./c8games/pong.ch8", "rb");
     fread(&memory[0x200], 0xFFF, 1, in);
     /* for(int i = 0; i < (0xfff - 0x200); i++) { */
     /*     printf("%x ", memory[i+0x200]); */
@@ -317,39 +317,31 @@ void emulate_cycle()
         }
         break;
     case 0xF000:
-        switch(opcode & 0x00F0) {
-        case 0x0000:
-            switch(opcode & 0x000F) {
-            case 0x0007: /* 0xFX07 Sets VX to the value of the delay timer */
-                V[(opcode & 0x0F00) >> 8] = delay_timer;
-                break;
-            case 0x000A: /* 0xFX0A A key press is awaited, and then stored in
-                          * VX
-                          */
-                /* TODO: fill this in, needs SDL instruction as well */
-                break;
-            }
+        switch(opcode & 0x00FF) {
+        case 0x0007: /* 0xFX07 Sets VX to the value of the delay timer */
+            V[(opcode & 0x0F00) >> 8] = delay_timer;
             break;
-        case 0x0010:
-            switch(opcode & 0x000F) {
-            case 0x0005: /* 0xFX15 Sets the delay timer to VX */
-                delay_timer = V[(opcode & 0x0F00) >> 8];
-                break;
-            case 0x0008: /* 0xFX18 Sets the sound timer to VX */
-                sound_timer = V[(opcode & 0x0F00) >> 8];
-                break;
-            case 0x000E: /* 0xFX1E Adds VX to I */
-                I += V[(opcode & 0x0F00) >> 8];
-                break;
-            }
+        case 0x000A: /* 0xFX0A A key press is awaited, and then stored in
+                      * VX
+                      */
+            /* TODO: fill this in, needs SDL instruction as well */
             break;
-        case 0x0020: /* 0xFX29 Sets I to the location of the sprite for the
+        case 0x0015: /* 0xFX15 Sets the delay timer to VX */
+            delay_timer = V[(opcode & 0x0F00) >> 8];
+            break;
+        case 0x0018: /* 0xFX18 Sets the sound timer to VX */
+            sound_timer = V[(opcode & 0x0F00) >> 8];
+            break;
+        case 0x001E: /* 0xFX1E Adds VX to I */
+            I += V[(opcode & 0x0F00) >> 8];
+            break;
+        case 0x0029: /* 0xFX29 Sets I to the location of the sprite for the
                       * character in VX. Characters 0-F (in hex) are represented
                       * by a 4x5 font.
                       */
             I = V[(opcode & 0x0F00) >> 8] * 5;
             break;
-        case 0x0030: /* 0xFX33 Stores the Binary-coded decimal representation of
+        case 0x0033: /* 0xFX33 Stores the Binary-coded decimal representation of
                       * VX, with the most significant of the three digits at the
                       * address in I, the middle digit at I plus 1, and the
                       * least significant digit at I plus 2.
@@ -361,7 +353,7 @@ void emulate_cycle()
                 memory[I + 2] = vx % 10;
             }
             break;
-        case 0x0050: /* 0xFX55 Stores V0 to VX in memory starting at address I */
+        case 0x0055: /* 0xFX55 Stores V0 to VX in memory starting at address I */
             {
                 int vx = (opcode & 0x0F00) >> 8;
                 int v = 0;
@@ -373,7 +365,7 @@ void emulate_cycle()
                 I = I + vx + 1;
             }
             break;
-        case 0x0060: /* Fills V0 to VX with values from memory starting at
+        case 0x0065: /* 0xFX65 Fills V0 to VX with values from memory starting at
                       * address I
                       */
             {
