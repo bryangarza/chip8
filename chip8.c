@@ -383,6 +383,5 @@ void emulate_cycle()
         }
     default:
         printf("%X: No match\n", opcode);
-        break;
     }
 }
