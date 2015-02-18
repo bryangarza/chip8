@@ -5,7 +5,7 @@ build:
 
 run:
 	make build
-	./chip8
+	./chip8 ./c8games/breakout.ch8
 
 debug:
 	$(cc) -g -Wall -std=c99 -o chip8 chip8.c `sdl2-config --cflags --libs`

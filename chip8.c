@@ -47,7 +47,7 @@ unsigned char chip8_fontset[80] =
 
 int main(int argc, char *argv[])
 {
-    cpu_reset();
+    cpu_reset(argv[1]);
 
     /* load fontset into memory */
     for(int i = 0; i < 80; i++) {
@@ -116,13 +116,13 @@ void draw(SDL_Renderer *renderer, uint32_t ms)
 }
 
 
-void cpu_reset()
+void cpu_reset(char *game)
 {
     I = 0;
     pc = 0x200;
     memset(V, 0, sizeof(V));
     FILE *in;
-    in = fopen("./c8games/breakout.ch8", "rb");
+    in = fopen(game, "rb");
     fread(&memory[0x200], 0xFFF, 1, in);
     fclose(in);
     memset(gfx, 0, sizeof(gfx));
