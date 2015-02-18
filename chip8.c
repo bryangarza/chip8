@@ -69,6 +69,7 @@ int main(int argc, char *argv[])
 
     SDL_Renderer *renderer;
     renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED);
+    /* SDL_RenderClear(renderer); */
 
     uint32_t ms = 15;
     /* gfx[3][4] = 1; */
@@ -86,13 +87,18 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+void draw_sprite(SDL_Renderer *renderer, SDL_Rect r)
+{
+    SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
+    SDL_RenderFillRect(renderer, &r);
+}
+
+
 void draw(SDL_Renderer *renderer, uint32_t ms)
 {
-
     SDL_Rect r;
-    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
 
-    /* Clear window */
+    /* clear window */
     SDL_RenderClear(renderer);
 
     for (int i = 0; i < SCREEN_H; i++) {
@@ -100,27 +106,14 @@ void draw(SDL_Renderer *renderer, uint32_t ms)
             if (gfx[(j/10) + (i/10) * 64] >= 1) {
                 r.y = i;
                 r.x = j;
-                r.w = 10;
-                r.h = 10;
+                r.w = 1;
+                r.h = 1;
+                draw_sprite(renderer, r);
             }
         }
     }
 
-    /* for (int y = 0; y < W; y++) { */
-    /*     for (int x = 0; x < H; x++) { */
-    /*         if (gfx[y][x] != 0) { */
-    /*             printf("Will draw"); */
-    /*             r.x = x; */
-    /*             r.y = y; */
-    /*             r.w = 10; */
-    /*             r.h = 10; */
-    /*         } */
-    /*     } */
-    /* } */
-
-    SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
-
-    SDL_RenderFillRect(renderer, &r);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
     SDL_RenderPresent(renderer);
 
@@ -134,7 +127,7 @@ void cpu_reset()
     pc = 0x200;
     memset(V, 0, sizeof(V));
     FILE *in;
-    in = fopen("./c8games/pong.ch8", "rb");
+    in = fopen("./c8games/breakout.ch8", "rb");
     fread(&memory[0x200], 0xFFF, 1, in);
     /* for(int i = 0; i < (0xfff - 0x200); i++) { */
     /*     printf("%x ", memory[i+0x200]); */
@@ -142,6 +135,7 @@ void cpu_reset()
 
     /* printf("%x", get_next_opcode()); */
     fclose(in);
+    memset(gfx, 0, sizeof(gfx));
 }
 
 unsigned short get_next_opcode()
@@ -158,6 +152,72 @@ void emulate_cycle()
     printf("Instruction %X\n", opcode);
 
     switch(opcode & 0xF000) {
+    case 0xF000:
+        switch(opcode & 0x00FF) {
+        case 0x0007: /* 0xFX07 Sets VX to the value of the delay timer */
+            V[(opcode & 0x0F00) >> 8] = delay_timer;
+            break;
+        case 0x000A: /* 0xFX0A A key press is awaited, and then stored in
+                      * VX
+                      */
+            /* TODO: fill this in, needs SDL instruction as well */
+            break;
+        case 0x0015: /* 0xFX15 Sets the delay timer to VX */
+            delay_timer = V[(opcode & 0x0F00) >> 8];
+            break;
+        case 0x0018: /* 0xFX18 Sets the sound timer to VX */
+            sound_timer = V[(opcode & 0x0F00) >> 8];
+            break;
+        case 0x001E: /* 0xFX1E Adds VX to I */
+            I += V[(opcode & 0x0F00) >> 8];
+            break;
+        case 0x0029: /* 0xFX29 Sets I to the location of the sprite for the
+                      * character in VX. Characters 0-F (in hex) are represented
+                      * by a 4x5 font.
+                      */
+            I = V[(opcode & 0x0F00) >> 8] * 5;
+            break;
+        case 0x0033: /* 0xFX33 Stores the Binary-coded decimal representation of
+                      * VX, with the most significant of the three digits at the
+                      * address in I, the middle digit at I plus 1, and the
+                      * least significant digit at I plus 2.
+                      */
+            {
+                unsigned char vx = V[(opcode * 0x0F00) >> 8];
+                memory[I] = vx / 100;
+                memory[I + 1] = (vx / 10) % 10;
+                memory[I + 2] = vx % 10;
+            }
+            break;
+        case 0x0055: /* 0xFX55 Stores V0 to VX in memory starting at address I */
+            {
+                int vx = (opcode & 0x0F00) >> 8;
+                int v = 0;
+
+                while (v <= vx) {
+                    memory[I + v] = V[v];
+                }
+
+                I = I + vx + 1;
+            }
+            break;
+        case 0x0060: /* 0xFX65 Fills V0 to VX with values from memory starting at
+                      * address I
+                      */
+            {
+                int vx = (opcode & 0x0F00) >> 8;
+                int v = 0;
+
+                while (v <= vx) {
+                    V[v] = memory[I + v];
+                    v++;
+                }
+
+                I = I + vx + 1;
+            }
+            break;
+        }
+        break;
     case 0x0000:
         switch(opcode & 0x000F) {
         case 0x0000: /* 0x00E0: Clears the screen */
@@ -316,71 +376,6 @@ void emulate_cycle()
             break;
         }
         break;
-    case 0xF000:
-        switch(opcode & 0x00FF) {
-        case 0x0007: /* 0xFX07 Sets VX to the value of the delay timer */
-            V[(opcode & 0x0F00) >> 8] = delay_timer;
-            break;
-        case 0x000A: /* 0xFX0A A key press is awaited, and then stored in
-                      * VX
-                      */
-            /* TODO: fill this in, needs SDL instruction as well */
-            break;
-        case 0x0015: /* 0xFX15 Sets the delay timer to VX */
-            delay_timer = V[(opcode & 0x0F00) >> 8];
-            break;
-        case 0x0018: /* 0xFX18 Sets the sound timer to VX */
-            sound_timer = V[(opcode & 0x0F00) >> 8];
-            break;
-        case 0x001E: /* 0xFX1E Adds VX to I */
-            I += V[(opcode & 0x0F00) >> 8];
-            break;
-        case 0x0029: /* 0xFX29 Sets I to the location of the sprite for the
-                      * character in VX. Characters 0-F (in hex) are represented
-                      * by a 4x5 font.
-                      */
-            I = V[(opcode & 0x0F00) >> 8] * 5;
-            break;
-        case 0x0033: /* 0xFX33 Stores the Binary-coded decimal representation of
-                      * VX, with the most significant of the three digits at the
-                      * address in I, the middle digit at I plus 1, and the
-                      * least significant digit at I plus 2.
-                      */
-            {
-                unsigned char vx = V[(opcode * 0x0F00) >> 8];
-                memory[I] = vx / 100;
-                memory[I + 1] = (vx / 10) % 10;
-                memory[I + 2] = vx % 10;
-            }
-            break;
-        case 0x0055: /* 0xFX55 Stores V0 to VX in memory starting at address I */
-            {
-                int vx = (opcode & 0x0F00) >> 8;
-                int v = 0;
-
-                while (v <= vx) {
-                    memory[I + v] = V[v];
-                }
-
-                I = I + vx + 1;
-            }
-            break;
-        case 0x0060: /* 0xFX65 Fills V0 to VX with values from memory starting at
-                      * address I
-                      */
-            {
-                int vx = (opcode & 0x0F00) >> 8;
-                int v = 0;
-
-                while (v <= vx) {
-                    V[v] = memory[I + v];
-                    v++;
-                }
-
-                I = I + vx + 1;
-            }
-            break;
-        }
     default:
         printf("%X: No match\n", opcode);
     }
