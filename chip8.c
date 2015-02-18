@@ -365,7 +365,7 @@ void emulate_cycle()
                 I = I + vx + 1;
             }
             break;
-        case 0x0065: /* 0xFX65 Fills V0 to VX with values from memory starting at
+        case 0x0060: /* 0xFX65 Fills V0 to VX with values from memory starting at
                       * address I
                       */
             {
@@ -381,9 +381,8 @@ void emulate_cycle()
             }
             break;
         }
-        default:
-            printf("%X: No match\n", opcode);
-            break;
+    default:
+        printf("%X: No match\n", opcode);
         break;
     }
 }
