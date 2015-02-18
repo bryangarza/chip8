@@ -23,7 +23,7 @@ unsigned char sound_timer;
 unsigned short stack[16];
 unsigned short sp;
 unsigned char key[16];
-unsigned char draw_flag;
+unsigned char draw_flag = 1;
 unsigned char chip8_fontset[80] =
 {
   0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -74,7 +74,9 @@ int main(int argc, char *argv[])
 
     for (;;) {
         emulate_cycle();
-        draw(renderer, ms);
+        if (draw_flag) {
+            draw(renderer, ms);
+        }
     }
 
     SDL_DestroyWindow(window);
@@ -84,7 +86,7 @@ int main(int argc, char *argv[])
 
 void draw_sprite(SDL_Renderer *renderer, SDL_Rect r)
 {
-    SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
+    SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
     SDL_RenderFillRect(renderer, &r);
 }
 
@@ -347,6 +349,8 @@ void emulate_cycle()
                 }
             }
         }
+
+        draw_flag = 1;
         break;
     case 0xE000:
         switch(opcode & 0x00FF) {
