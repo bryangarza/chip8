@@ -69,13 +69,8 @@ int main(int argc, char *argv[])
 
     SDL_Renderer *renderer;
     renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED);
-    /* SDL_RenderClear(renderer); */
 
     uint32_t ms = 15;
-    /* gfx[3][4] = 1; */
-    /* draw(renderer, ms); */
-    /* gfx[5][10] = 1; */
-    /* draw(renderer, ms); */
 
     for (;;) {
         emulate_cycle();
@@ -129,11 +124,6 @@ void cpu_reset()
     FILE *in;
     in = fopen("./c8games/breakout.ch8", "rb");
     fread(&memory[0x200], 0xFFF, 1, in);
-    /* for(int i = 0; i < (0xfff - 0x200); i++) { */
-    /*     printf("%x ", memory[i+0x200]); */
-    /* } */
-
-    /* printf("%x", get_next_opcode()); */
     fclose(in);
     memset(gfx, 0, sizeof(gfx));
 }
