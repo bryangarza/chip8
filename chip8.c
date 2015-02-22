@@ -67,16 +67,34 @@ int main(int argc, char *argv[])
         SDL_WINDOW_SHOWN
     );
 
+    SDL_Event event;
     SDL_Renderer *renderer;
     renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED);
 
     uint32_t ms = 15;
 
     for (;;) {
+        if (SDL_PollEvent(&event)) {
+            const uint8_t *state = SDL_GetKeyboardState(NULL);
+
+            if (state[SDL_SCANCODE_ESCAPE]) {
+                break;
+            }
+
+            if (state[SDL_SCANCODE_RETURN]) {
+                printf("<RETURN> is pressed.\n");
+            }
+
+            if (state[SDL_SCANCODE_RIGHT] && state[SDL_SCANCODE_UP]) {
+                printf("Right and Up Keys Pressed.\n");
+            }
+        }
         emulate_cycle();
+
         if (draw_flag) {
             draw(renderer, ms);
         }
+
     }
 
     SDL_DestroyWindow(window);
