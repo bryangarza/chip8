@@ -159,7 +159,7 @@ unsigned short get_next_opcode()
 void emulate_cycle()
 {
     opcode = get_next_opcode();
-    printf("Instruction %X\n", opcode);
+    /* printf("Instruction %X\n", opcode); */
 
     switch(opcode & 0xF000) {
     case 0xF000:
@@ -375,6 +375,8 @@ void emulate_cycle()
         case 0x009E: /* 0xEX9E Skips the next instruction if the key stored in
                       * VX is pressed.
                       */
+            printf("Skipping next instr if key in V[%X] is pressed\n",
+                   (opcode & 0x0F00) >> 8);
             if (key[V[(opcode & 0x0F00) >> 8]] == 1) {
                 pc += 2;
             }
@@ -382,6 +384,8 @@ void emulate_cycle()
         case 0x00A1: /* 0xEXA1 Skips the next instruction if the key stored in
                       * VX isn't pressed.
                       */
+            printf("Skipping next instr if key in V[%X] isn't pressed\n",
+                   (opcode & 0x0F00) >> 8);
             if (key[V[(opcode & 0x0F00) >> 8]] == 0) {
                 pc += 2;
             }
