@@ -22,7 +22,6 @@ unsigned char delay_timer;
 unsigned char sound_timer;
 unsigned short stack[16];
 unsigned short sp;
-unsigned char key[16];
 unsigned char draw_flag = 1;
 unsigned char chip8_fontset[80] =
 {
@@ -42,6 +41,24 @@ unsigned char chip8_fontset[80] =
   0xE0, 0x90, 0x90, 0x90, 0xE0, // D
   0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
   0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+};
+unsigned char keymap[16] = {
+    SDL_SCANCODE_1,
+    SDL_SCANCODE_2,
+    SDL_SCANCODE_3,
+    SDL_SCANCODE_4,
+    SDL_SCANCODE_Q,
+    SDL_SCANCODE_W,
+    SDL_SCANCODE_E,
+    SDL_SCANCODE_R,
+    SDL_SCANCODE_A,
+    SDL_SCANCODE_S,
+    SDL_SCANCODE_D,
+    SDL_SCANCODE_F,
+    SDL_SCANCODE_Z,
+    SDL_SCANCODE_X,
+    SDL_SCANCODE_C,
+    SDL_SCANCODE_V
 };
 
 
@@ -67,28 +84,13 @@ int main(int argc, char *argv[])
         SDL_WINDOW_SHOWN
     );
 
-    SDL_Event event;
+    /* SDL_Event event; */
     SDL_Renderer *renderer;
     renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED);
 
     uint32_t ms = 15;
 
     for (;;) {
-        if (SDL_PollEvent(&event)) {
-            const uint8_t *state = SDL_GetKeyboardState(NULL);
-
-            if (state[SDL_SCANCODE_ESCAPE]) {
-                break;
-            }
-
-            if (state[SDL_SCANCODE_RETURN]) {
-                printf("<RETURN> is pressed.\n");
-            }
-
-            if (state[SDL_SCANCODE_RIGHT] && state[SDL_SCANCODE_UP]) {
-                printf("Right and Up Keys Pressed.\n");
-            }
-        }
         emulate_cycle();
 
         if (draw_flag) {
@@ -167,10 +169,17 @@ void emulate_cycle()
         case 0x0007: /* 0xFX07 Sets VX to the value of the delay timer */
             V[(opcode & 0x0F00) >> 8] = delay_timer;
             break;
-        case 0x000A: /* 0xFX0A A key press is awaited, and then stored in
-                      * VX
-                      */
-            /* TODO: fill this in, needs SDL instruction as well */
+        case 0x000A: /* 0xFX0A A key press is awaited, and then stored in VX */
+
+            const uint8_t *keys = SDL_GetKeyboardState(NULL);
+
+            for (int i = 0; i < 16; i++) {
+                if (keys[keymap[i]]) {
+                    V[(opcode & 0x0F00) >> 8] = i;
+                    pc += 2;
+                }
+            }
+
             break;
         case 0x0015: /* 0xFX15 Sets the delay timer to VX */
             delay_timer = V[(opcode & 0x0F00) >> 8];
@@ -373,20 +382,22 @@ void emulate_cycle()
     case 0xE000:
         switch(opcode & 0x00FF) {
         case 0x009E: /* 0xEX9E Skips the next instruction if the key stored in
-                      * VX is pressed.
-                      */
-            printf("Skipping next instr if key in V[%X] is pressed\n",
-                   (opcode & 0x0F00) >> 8);
-            if (key[V[(opcode & 0x0F00) >> 8]] == 1) {
+                      * VX is pressed. */
+            const uint8_t *keys = SDL_GetKeyboardState(NULL);
+            if (keys[keymap[V[(opcode & 0x0F00) >> 8]]]) {
+                pc += 4;
+            }
+            else {
                 pc += 2;
             }
             break;
         case 0x00A1: /* 0xEXA1 Skips the next instruction if the key stored in
-                      * VX isn't pressed.
-                      */
-            printf("Skipping next instr if key in V[%X] isn't pressed\n",
-                   (opcode & 0x0F00) >> 8);
-            if (key[V[(opcode & 0x0F00) >> 8]] == 0) {
+                      * VX isn't pressed. */
+            const uint8_t *keys = SDL_GetKeyboardState(NULL);
+            if (!keys[keymap[V[(opcode & 0x0F00) >> 8]]]) {
+                pc += 4;
+            }
+            else {
                 pc += 2;
             }
             break;
